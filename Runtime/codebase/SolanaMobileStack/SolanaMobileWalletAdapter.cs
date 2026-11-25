@@ -203,7 +203,7 @@ namespace Solana.Unity.SDK
             finally { OpGate.Release(); }
         }
 
-        private async Task RunPrivileged(Action<IAdapterOperations> privilegedAction, string label)
+        private async Task RunPrivileged(Func<IAdapterOperations, Task> privilegedAction, string label)
         {
             if (_authToken.IsNullOrEmpty() && _walletOptions.keepConnectionAlive)
                 _authToken = await _authCache.Get();
@@ -558,7 +558,7 @@ namespace Solana.Unity.SDK
             AuthorizationResult authorization = null;
             using (var scenario = await CreateTargetedScenario())
             {
-                var result = await scenario.StartAndExecute(new List<Action<IAdapterOperations>>
+                var result = await scenario.StartAndExecute(new List<Func<IAdapterOperations, Task>>
                 {
                     async client =>
                     {
@@ -739,7 +739,7 @@ namespace Solana.Unity.SDK
                 {
                     using var localAssociationScenario = new LocalAssociationScenario(targetPackage);
                     var result = await localAssociationScenario.StartAndExecute(
-                        new List<Action<IAdapterOperations>>
+                        new List<Func<IAdapterOperations, Task>>
                         {
                             async client =>
                             {
@@ -828,7 +828,7 @@ namespace Solana.Unity.SDK
             CapabilitiesResult capabilities = null;
             using var localAssociationScenario = await CreateTargetedScenario();
             var result = await localAssociationScenario.StartAndExecute(
-                new List<Action<IAdapterOperations>>
+                new List<Func<IAdapterOperations, Task>>
                 {
                     async client =>
                     {
@@ -917,9 +917,9 @@ internal sealed class AuthorizeOperation
         _chain = chain;
     }
 
-    public List<Action<IAdapterOperations>> BuildActions()
+    public List<Func<IAdapterOperations, Task>> BuildActions()
     {
-        return new List<Action<IAdapterOperations>>
+        return new List<Func<IAdapterOperations, Task>>
         {
             async client =>
             {
@@ -951,9 +951,9 @@ internal sealed class ReauthorizeOperation
         _chain = chain;
     }
 
-    public List<Action<IAdapterOperations>> BuildActions()
+    public List<Func<IAdapterOperations, Task>> BuildActions()
     {
-        return new List<Action<IAdapterOperations>>
+        return new List<Func<IAdapterOperations, Task>>
         {
             async client =>
             {

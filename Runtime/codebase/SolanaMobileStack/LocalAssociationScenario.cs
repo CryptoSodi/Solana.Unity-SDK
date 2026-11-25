@@ -47,7 +47,7 @@ public class LocalAssociationScenario : IDisposable
         return unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
     }
 
-    public async Task<Response<object>> StartAndExecute(List<Action<IAdapterOperations>> actions,
+    public async Task<Response<object>> StartAndExecute(List<Func<IAdapterOperations, Task>> actions,
         CancellationToken ct = default)
     {
         if (actions == null || actions.Count == 0)
@@ -87,7 +87,7 @@ public class LocalAssociationScenario : IDisposable
 
                 Debug.Log("[MWA] Pubkey received, session is encrypted");
             
-                var queue = new Queue<Action<IAdapterOperations>>(actions);
+                var queue = new Queue<Func<IAdapterOperations, Task>>(actions);
                 Response<object> lastResponse = null;
 
                 while (queue.Count > 0)
@@ -96,12 +96,17 @@ public class LocalAssociationScenario : IDisposable
                 
                     var action = queue.Dequeue();
                     Debug.Log($"[MWA] Invoking action {action.Method.Name}");
-                    action.Invoke(_client);
+                    var actionTask = action.Invoke(_client);
                 
                     lastResponse = await AwaitWithCancellation(_responseTcs.Task, _cancellationToken);
+                    // Observe each operation before advancing. Preserve the wallet's
+                    // RPC error for the caller instead of leaking an async-void exception.
+                    try { await actionTask; }
+                    catch when (!lastResponse.WasSuccessful) { }
                     _responseTcs = null;
 
                     _cancellationToken.ThrowIfCancellationRequested();
+                    if (!lastResponse.WasSuccessful) break;
                 }
 
                 _tcs.TrySetResult(lastResponse ?? new Response<object>());
