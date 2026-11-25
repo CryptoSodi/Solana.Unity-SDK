@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEditor;
 using System.IO;
 
-#if UNITY_WEBGL && UNITY_EDITOR
+#if UNITY_WEBGL && UNITY_EDITOR && BATTLECITIES_SOLANA_SDK_WEB_TOOLS
 
 /// Inspired by Author: Jonas Hahn, Source: https://github.com/Woody4618/Solana.Unity-SDK/blob/main/Runtime/codebase/WebGLTemplatePostProcessor.cs
 
@@ -53,7 +53,7 @@ public static class WebGLTemplatesExporter {
 
 #endif
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR && BATTLECITIES_SOLANA_SDK_WEB_TOOLS
 public static class SetDefaultSplashScreen
 {
     [UnityEditor.Callbacks.DidReloadScripts]

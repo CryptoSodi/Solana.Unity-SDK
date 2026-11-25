@@ -1,4 +1,4 @@
-﻿#if UNITY_WEBGL && UNITY_EDITOR
+﻿#if UNITY_WEBGL && UNITY_EDITOR && BATTLECITIES_SOLANA_SDK_WEB_TOOLS
 
 using UnityEngine;
 using UnityEditor;
