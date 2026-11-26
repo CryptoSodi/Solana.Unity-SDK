@@ -33,8 +33,6 @@ public class LocalAssociationScenario : IDisposable
     private TaskCompletionSource<Response<object>> _tcs;
     private CancellationToken _cancellationToken;
     private CancellationTokenSource _runCts;
-    private bool _seenFocusLossAfterLaunch;
-    private bool _focusReturnedBeforeConnect;
 
     public LocalAssociationScenario(string targetPackage = null)
     {
@@ -59,10 +57,8 @@ public class LocalAssociationScenario : IDisposable
 
         _cancellationToken = _runCts.Token;
         _tcs = new TaskCompletionSource<Response<object>>();
-        _seenFocusLossAfterLaunch = false;
-        _focusReturnedBeforeConnect = false;
-        Application.focusChanged += OnApplicationFocusChanged;
-
+        // Android may briefly return focus between its chooser closing and the
+        // chosen wallet starting. Keep retrying until the bounded timeout.
         StartActivityForAssociation(_session.AssociationToken, _port);
 
         Debug.Log("[MWA] Waiting for websocket connection");
@@ -113,12 +109,9 @@ public class LocalAssociationScenario : IDisposable
             }
             catch (OperationCanceledException)
             {
-                var msg = _focusReturnedBeforeConnect
-                    ? "Association aborted: returned to app before wallet websocket connected"
-                    : "Timeout or cancelled";
                 _tcs.TrySetResult(new Response<object>
                 {
-                    Error = new Response<object>.ResponseError { Message = msg } 
+                    Error = new Response<object>.ResponseError { Message = "Timeout or cancelled" }
                 });
             }
             catch (Exception ex)
@@ -133,27 +126,6 @@ public class LocalAssociationScenario : IDisposable
         }, _runCts.Token);
         
         return await _tcs.Task;
-    }
-
-    private void OnApplicationFocusChanged(bool hasFocus)
-    {
-        if (!hasFocus)
-        {
-            _seenFocusLossAfterLaunch = true;
-            return;
-        }
-
-        if (!_seenFocusLossAfterLaunch)
-        {
-            return;
-        }
-
-        if (_isConnecting && (_webSocket == null || _webSocket.State != WebSocketState.Open))
-        {
-            _focusReturnedBeforeConnect = true;
-            Debug.LogWarning("[MWA] Focus returned before WS connected; aborting association attempt early.");
-            _runCts?.Cancel();
-        }
     }
 
     private static int RandomPort()
@@ -351,8 +323,6 @@ public class LocalAssociationScenario : IDisposable
 
     private async Task CleanupAsync()
     {
-        Application.focusChanged -= OnApplicationFocusChanged;
-
         if (_webSocket is { State: WebSocketState.Open })
             await _webSocket.Close();
 
